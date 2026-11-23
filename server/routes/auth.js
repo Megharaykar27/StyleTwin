@@ -27,7 +27,7 @@ router.post("/register", limiter, wrap(async (req, res) => {
 router.post("/login", limiter, wrap(async (req, res) => {
   const row = one("SELECT * FROM users WHERE email = ?", String(req.body.email || "").trim().toLowerCase());
   if (!row || !(await bcrypt.compare(String(req.body.password || ""), row.password_hash)))
-    throw new HttpError(400, "Invalid email or password.");
+    throw new HttpError(401, "Invalid email or password.");
   const user = { id: row.id, name: row.name, email: row.email };
   res.json({ token: signToken(user), user });
 }));

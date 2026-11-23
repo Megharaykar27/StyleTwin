@@ -1,14 +1,15 @@
 // SQLite database: one file (styletwin.db), created automatically.
-import Database from "better-sqlite3";
+// Uses Node's built-in SQLite (Node 22.13+), so there is nothing to compile on install.
+import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const file = process.env.DATABASE_FILE || path.join(here, "..", "styletwin.db");
 
-export const db = new Database(file);
-db.pragma("journal_mode = WAL"); // faster, safe concurrent reads
-db.pragma("foreign_keys = ON");
+export const db = new DatabaseSync(file);
+db.exec("PRAGMA journal_mode = WAL"); // faster, safe concurrent reads
+db.exec("PRAGMA foreign_keys = ON");
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (

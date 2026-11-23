@@ -37,7 +37,7 @@ Screenshots were taken in demo mode, so try-on results show a labelled preview i
 | Layer | Tools |
 |---|---|
 | Frontend | React 18, Vite, Tailwind CSS, Framer Motion, React Router, lucide-react |
-| Backend | Node.js, Express (ES modules), better-sqlite3 |
+| Backend | Node.js, Express (ES modules), built-in `node:sqlite` |
 | AI | Google Gemini (`@google/genai`): `gemini-2.5-flash` for tagging and styling, `gemini-2.5-flash-image` for try-on |
 | Images | sharp (auto-rotate, resize, strip EXIF and GPS data), multer |
 | Security | JWT auth, bcrypt, helmet, rate limiting (login and try-on) |
@@ -63,7 +63,7 @@ The outfit planner is deterministic, so it is fast and free. Colour harmony uses
 
 ## Run it locally
 
-You need Node.js 20 or newer.
+You need **Node.js 22.13 or newer** (it uses Node's built-in SQLite, so there is nothing to compile and no database to install).
 
 **1. Backend**
 
