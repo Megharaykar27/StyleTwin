@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; color-scheme: dark; }
+  body { @apply bg-night font-sans text-white/90; }
+  h1, h2, h3 { @apply font-display tracking-tight; }
+  ::selection { background: rgba(236, 72, 153, 0.35); }
+}
+
+@layer components {
+  /* Frosted glass panel: the core of the Aurora Glass look */
+  .glass { @apply rounded-3xl border border-white/10 bg-white/[0.05] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-xl; }
+  .glass-strong { @apply rounded-3xl border border-white/15 bg-white/[0.09] backdrop-blur-2xl; }
+  .gradient-text { @apply bg-gradient-to-r from-aura-violet via-aura-pink to-aura-cyan bg-clip-text text-transparent; }
+
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-40; }
+  .btn-primary { @apply btn bg-gradient-to-r from-aura-violet to-aura-pink text-white shadow-[0_10px_40px_-10px_rgba(236,72,153,0.7)] hover:shadow-[0_14px_50px_-8px_rgba(236,72,153,0.9)] hover:brightness-110; }
+  .btn-glass { @apply btn border border-white/15 bg-white/[0.06] text-white backdrop-blur-xl hover:border-white/30 hover:bg-white/[0.12]; }
+  .chip { @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-white/80 transition hover:border-white/25; }
+  .chip-on { @apply border-transparent bg-white text-night; }
+  .input { @apply w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-aura-violet/70 focus:bg-white/[0.08] focus:ring-4 focus:ring-aura-violet/15; }
+  .label { @apply mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-white/50; }
+}
+
+/* moving shine on loading placeholders */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 400% 100%;
+  animation: shine 1.6s linear infinite;
+}
+@keyframes shine { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+
+input[type="range"] { accent-color: #ec4899; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 99px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
