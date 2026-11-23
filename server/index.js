@@ -4,8 +4,10 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import crypto from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { UPLOAD_DIR } from "./lib/storage.js";
-import { mode } from "./ai/index.js";
+import { mode, freeTryOn } from "./ai/index.js";
+import { SAMPLE_MODELS } from "./samples/catalog.js";
 import authRoutes from "./routes/auth.js";
 import wardrobeRoutes from "./routes/wardrobe.js";
 import tryonRoutes from "./routes/tryon.js";
@@ -22,9 +24,10 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } })); // l
 app.use(cors({ origin: (process.env.CLIENT_URL || "http://localhost:5173").split(",") }));
 app.use(express.json({ limit: "100kb" }));
 app.use("/uploads", express.static(UPLOAD_DIR, { maxAge: "7d", fallthrough: false }));
+app.use("/samples/models", express.static(fileURLToPath(new URL("./samples/models", import.meta.url)), { maxAge: "7d", fallthrough: false, index: false }));
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
-app.get("/api/config", (_req, res) => res.json({ aiMode: mode }));
+app.get("/api/config", (_req, res) => res.json({ aiMode: mode, freeTryOn, sampleModels: SAMPLE_MODELS.map((f) => `/samples/models/${f}`) }));
 app.use("/api/auth", authRoutes);
 app.use("/api/wardrobe", wardrobeRoutes);
 app.use("/api/tryon", tryonRoutes);

@@ -43,12 +43,14 @@ function WardrobeDrawer({ onPick, onClose }) {
   );
 }
 
-function Generating() {
+function Generating({ slow }) {
   const [i, setI] = useState(0);
+  const [secs, setSecs] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setI((n) => Math.min(n + 1, STAGES.length - 1)), 1800);
-    return () => clearInterval(t);
-  }, []);
+    const t = setInterval(() => setI((n) => Math.min(n + 1, STAGES.length - 1)), slow ? 9000 : 1800);
+    const c = setInterval(() => setSecs((n) => n + 1), 1000);
+    return () => { clearInterval(t); clearInterval(c); };
+  }, [slow]);
   return (
     <div className="relative grid aspect-[3/4] w-full place-items-center overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-aura-violet/20 via-night-2 to-aura-pink/20">
       <div className="absolute inset-x-0 h-28 animate-scan bg-gradient-to-b from-transparent via-aura-cyan/35 to-transparent" />
@@ -59,7 +61,7 @@ function Generating() {
             {STAGES[i]}
           </motion.p>
         </AnimatePresence>
-        <p className="mt-1 text-xs text-white/45">Usually 5–15 seconds</p>
+        <p className="mt-1 text-xs text-white/45">{secs}s · {slow ? "the free model usually takes 30–90 seconds" : "usually 5–15 seconds"}</p>
       </div>
     </div>
   );
@@ -76,7 +78,7 @@ const Step = ({ n, title, done, children }) => (
 );
 
 export default function Studio() {
-  const { aiMode } = useApp();
+  const { aiMode, freeTryOn, sampleModels } = useApp();
   const [params, setParams] = useSearchParams();
   const [person, setPerson] = useState(null); // {file,url} or {fromLook,url}
   const [garment, setGarment] = useState(null); // {file,url} or {garmentId,url,name,category}
@@ -113,6 +115,17 @@ export default function Studio() {
     setLook(null);
   };
 
+  // Sample model: fetch the image and use it like an uploaded photo
+  const pickSample = async (url, i) => {
+    try {
+      const blob = await fetch(img(url)).then((r) => r.blob());
+      setPerson(asPhoto(new File([blob], `sample-model-${i + 1}.jpg`, { type: blob.type || "image/jpeg" })));
+      setLook(null);
+    } catch {
+      toast.error("Couldn't load the sample photo.");
+    }
+  };
+
   const canGo = person && garment && !busy;
 
   const generate = async () => {
@@ -133,7 +146,8 @@ export default function Studio() {
       // the person photo is now saved on the server: reuse it next time
       setPerson({ fromLook: data.look.id, url: img(data.look.person) });
       if (!garment.garmentId) setGarment({ garmentId: data.garment.id, url: img(data.garment.image), name: data.garment.name, category: data.garment.category });
-      toast.success(data.look.provider === "demo" ? "Demo preview ready" : "Your look is ready ✨");
+      if (data.note) toast(data.note, { icon: "ℹ️", duration: 7000 });
+      else toast.success(data.look.provider === "demo" ? "Demo preview ready" : "Your look is ready ✨");
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
@@ -163,7 +177,9 @@ export default function Studio() {
 
       {aiMode === "demo" && (
         <div className="mb-6 rounded-2xl border border-amber-300/25 bg-amber-300/10 px-5 py-3 text-sm text-amber-100">
-          Demo mode: no Gemini key is set, so try-ons show a labelled preview. Add <code className="rounded bg-black/30 px-1">GEMINI_API_KEY</code> in <code className="rounded bg-black/30 px-1">server/.env</code> for real AI results.
+          {freeTryOn
+            ? <>Free mode: tops and jackets are tried on by the free IDM-VTON model (about 30–90 seconds). Dresses, bottoms and shoes show a preview. Add <code className="rounded bg-black/30 px-1">GEMINI_API_KEY</code> in <code className="rounded bg-black/30 px-1">server/.env</code> for AI tagging and style analysis.</>
+            : <>Demo mode: try-ons show a labelled preview. Add <code className="rounded bg-black/30 px-1">GEMINI_API_KEY</code> in <code className="rounded bg-black/30 px-1">server/.env</code> for real AI results.</>}
         </div>
       )}
 
@@ -171,6 +187,18 @@ export default function Studio() {
         {/* 1. YOU */}
         <Step n="1" title="Your photo" done={!!person}>
           <PhotoPicker value={personPhoto} onChange={(f) => { setPerson(f ? asPhoto(f) : null); setLook(null); }} label="Add your photo" hint="Front-facing, good light, plain background works best" icon={UserRound} />
+          {!person && sampleModels.length > 0 && (
+            <div className="mt-4">
+              <p className="label">No photo handy? Try a sample model</p>
+              <div className="flex gap-2">
+                {sampleModels.map((u, i) => (
+                  <button key={u} onClick={() => pickSample(u, i)} className="h-16 w-12 overflow-hidden rounded-xl border border-white/10 transition hover:border-aura-pink" aria-label={`Sample model ${i + 1}`}>
+                    <img src={img(u)} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {!person && recent.length > 0 && (
             <div className="mt-4">
               <p className="label">Or use a recent photo</p>
@@ -218,7 +246,7 @@ export default function Studio() {
             {look && <span className="text-xs text-white/40">{look.seconds?.toFixed(1)}s</span>}
           </div>
           {busy ? (
-            <Generating />
+            <Generating slow={aiMode === "demo" && freeTryOn && ["top", "outerwear"].includes(category)} />
           ) : look ? (
             <motion.div initial={{ opacity: 0, scale: 0.96, filter: "blur(10px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 0.6 }}>
               <CompareSlider before={img(look.person)} after={img(look.result)} className="aspect-[3/4]" />

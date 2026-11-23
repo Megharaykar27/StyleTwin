@@ -9,6 +9,12 @@ import { HttpError, auth, upload, wrap } from "../lib/http.js";
 import { deleteImage, publicUrl, saveImage } from "../lib/storage.js";
 import { tagGarment } from "../ai/index.js";
 import { wardrobeGaps } from "../lib/outfits.js";
+import { SAMPLE_CLOTHES } from "../samples/catalog.js";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const SAMPLE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "samples", "clothes");
 
 const router = Router();
 router.use(auth);
@@ -38,6 +44,24 @@ router.get("/", (req, res) => {
     gaps: wardrobeGaps(items),
   });
 });
+
+// One click: add the sample closet (real product photos, hand-checked tags)
+router.post("/samples", wrap(async (req, res) => {
+  const have = new Set(all("SELECT name FROM garments WHERE user_id = ? AND tagged_by = 'sample'", req.user.id).map((g) => g.name));
+  const created = [];
+  for (const s of SAMPLE_CLOTHES) {
+    if (have.has(s.name)) continue;
+    const saved = await saveImage(await fs.readFile(path.join(SAMPLE_DIR, s.file)), req.user.id, { maxSize: 900, background: "#ffffff" });
+    const id = nanoid(12);
+    run(
+      `INSERT INTO garments (id, user_id, image, name, category, color, color_hex, pattern, style, formality, seasons, in_wardrobe, tagged_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'sample')`,
+      id, req.user.id, saved.rel, s.name, s.category, s.color, s.color_hex, s.pattern, s.style, s.formality, JSON.stringify(s.seasons)
+    );
+    created.push(toGarment(one("SELECT * FROM garments WHERE id = ?", id)));
+  }
+  res.status(201).json({ items: created, message: created.length ? `${created.length} sample pieces added` : "The sample closet is already in your wardrobe" });
+}));
 
 router.post("/", upload.array("images", 10), wrap(async (req, res) => {
   if (!req.files?.length) throw new HttpError(400, "Please choose at least one photo.");

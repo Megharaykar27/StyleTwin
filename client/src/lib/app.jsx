@@ -1,4 +1,4 @@
-// App-wide state: the logged-in user and the AI mode (gemini or demo)
+// App-wide state: the logged-in user and server config (AI mode, free try-on, sample models)
 import { createContext, useContext, useEffect, useState } from "react";
 import API from "./api";
 
@@ -12,10 +12,10 @@ export function AppProvider({ children }) {
       return null;
     }
   });
-  const [aiMode, setAiMode] = useState(null);
+  const [config, setConfig] = useState({ aiMode: null, freeTryOn: false, sampleModels: [] });
 
   useEffect(() => {
-    API.get("/config").then((r) => setAiMode(r.data.aiMode)).catch(() => setAiMode("offline"));
+    API.get("/config").then((r) => setConfig(r.data)).catch(() => setConfig({ aiMode: "offline", freeTryOn: false, sampleModels: [] }));
     const onLogout = () => setUser(null);
     window.addEventListener("st:logout", onLogout);
     return () => window.removeEventListener("st:logout", onLogout);
@@ -32,7 +32,7 @@ export function AppProvider({ children }) {
     setUser(null);
   };
 
-  return <Ctx.Provider value={{ user, login, logout, aiMode }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ user, login, logout, ...config }}>{children}</Ctx.Provider>;
 }
 
 export const useApp = () => useContext(Ctx);

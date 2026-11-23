@@ -47,8 +47,8 @@ export default function Navbar() {
 
           <div className="flex items-center gap-2">
             {aiMode === "demo" && (
-              <span title="No Gemini key set: try-on shows a demo preview" className="hidden rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-[11px] font-semibold text-amber-200 sm:inline">
-                Demo AI
+              <span title="No Gemini key: free try-on for tops, other features run in demo mode" className="hidden rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-[11px] font-semibold text-amber-200 sm:inline">
+                Free mode
               </span>
             )}
             {user ? (

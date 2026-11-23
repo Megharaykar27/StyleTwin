@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Lightbulb, Pencil, Plus, Shirt, Trash2, Upload, Wand2, X } from "lucide-react";
+import { Lightbulb, Pencil, Plus, Shirt, Sparkles, Trash2, Upload, Wand2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import API, { errorMessage, img } from "../lib/api";
 import { CATEGORY_LABEL } from "../lib/app";
@@ -48,7 +48,7 @@ function EditModal({ item, onClose, onSaved, onDeleted }) {
             <button onClick={onClose} aria-label="Close" className="mt-2"><X /></button>
           </div>
           <p className="flex items-center gap-2 text-xs text-white/45">
-            <span className="h-4 w-4 rounded-full border border-white/20" style={{ background: item.color_hex }} /> {item.color} · tagged by {item.tagged_by === "user" ? "you" : item.tagged_by === "gemini" ? "AI" : "demo AI"}
+            <span className="h-4 w-4 rounded-full border border-white/20" style={{ background: item.color_hex }} /> {item.color} · tagged by {item.tagged_by === "user" ? "you" : item.tagged_by === "gemini" ? "AI" : item.tagged_by === "sample" ? "StyleTwin" : "demo AI"}
           </p>
           <div>
             <p className="label">Type</p>
@@ -114,6 +114,20 @@ export default function Wardrobe() {
     }
   };
 
+  const [adding, setAdding] = useState(false);
+  const addSamples = async () => {
+    setAdding(true);
+    try {
+      const { data: d } = await API.post("/wardrobe/samples");
+      toast.success(d.message);
+      await load();
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setAdding(false);
+    }
+  };
+
   const colors = useMemo(() => {
     const m = new Map();
     data?.items.forEach((g) => m.set(g.color, g.color_hex));
@@ -128,9 +142,14 @@ export default function Wardrobe() {
       onDrop={(e) => { e.preventDefault(); setDrag(false); upload(e.dataTransfer.files); }}
     >
       <PageTitle kicker="Your closet" title={<>My <span className="gradient-text">wardrobe</span></>} sub="Snap your clothes. AI tags every piece so StyleTwin can plan outfits from what you own.">
-        <button onClick={() => input.current.click()} disabled={!!uploading} className="btn-primary">
-          {uploading ? <><Spinner /> Tagging {uploading}…</> : <><Plus size={18} /> Add clothes</>}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button onClick={addSamples} disabled={adding} className="btn-glass">
+            {adding ? <><Spinner /> Adding…</> : <><Sparkles size={16} /> Sample closet</>}
+          </button>
+          <button onClick={() => input.current.click()} disabled={!!uploading} className="btn-primary">
+            {uploading ? <><Spinner /> Tagging {uploading}…</> : <><Plus size={18} /> Add clothes</>}
+          </button>
+        </div>
         <input ref={input} type="file" accept="image/*" multiple hidden onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
       </PageTitle>
 
@@ -146,7 +165,10 @@ export default function Wardrobe() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{[...Array(8)].map((_, i) => <div key={i} className="skeleton aspect-[4/5] rounded-3xl" />)}</div>
       ) : data.items.length === 0 ? (
         <Empty icon={Shirt} title="Your wardrobe is empty" text="Add photos of your clothes, one item per photo on a plain background works best. Drag and drop works too.">
-          <button onClick={() => input.current.click()} className="btn-primary"><Plus size={18} /> Add your first items</button>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button onClick={() => input.current.click()} className="btn-primary"><Plus size={18} /> Add your first items</button>
+            <button onClick={addSamples} disabled={adding} className="btn-glass">{adding ? <><Spinner /> Adding…</> : <><Sparkles size={16} /> Use the sample closet</>}</button>
+          </div>
         </Empty>
       ) : (
         <>

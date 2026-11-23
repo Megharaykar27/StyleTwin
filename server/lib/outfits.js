@@ -1,16 +1,16 @@
 // Outfit planner: builds every possible outfit from the wardrobe and
-// scores it on 4 things: right formality for the occasion, colours that
+// scores it on 4 things: right for the occasion (formality + style), colours that
 // go together, right for the weather, and not too many patterns.
 import { harmony, NEUTRALS } from "./color.js";
 
 export const OCCASIONS = {
-  college: { label: "College", formality: 1.6 },
-  everyday: { label: "Everyday", formality: 2 },
-  office: { label: "Office", formality: 3.6 },
-  date: { label: "Date night", formality: 3 },
-  party: { label: "Party", formality: 3.6 },
-  festive: { label: "Wedding / festive", formality: 4.5 },
-  interview: { label: "Interview", formality: 4.2 },
+  college: { label: "College", formality: 1.6, styles: ["casual", "sporty", "boho"] },
+  everyday: { label: "Everyday", formality: 2, styles: ["casual", "boho", "smart", "sporty"] },
+  office: { label: "Office", formality: 3.6, styles: ["smart", "formal"] },
+  date: { label: "Date night", formality: 3, styles: ["party", "smart", "boho"] },
+  party: { label: "Party", formality: 3.4, styles: ["party"] },
+  festive: { label: "Wedding / festive", formality: 4.5, styles: ["ethnic", "party", "formal"] },
+  interview: { label: "Interview", formality: 4.2, styles: ["formal", "smart"] },
 };
 export const WEATHER = {
   hot: { label: "Hot", seasons: ["summer", "all"], needsLayer: false },
@@ -30,10 +30,12 @@ function pairHarmony(items) {
 }
 
 function score(items, occasion, weather) {
-  const target = OCCASIONS[occasion].formality;
+  const { formality: target, styles } = OCCASIONS[occasion];
   const main = items.filter((g) => ["top", "bottom", "dress"].includes(g.category));
   const avgF = main.reduce((s, g) => s + g.formality, 0) / main.length;
-  const formality = 1 - Math.min(1, Math.abs(avgF - target) / 3);
+  const styleFit = main.filter((g) => styles.includes(g.style)).length / main.length;
+  // "formality" = occasion fit: how dressy it is (60%) and whether the style suits it (40%)
+  const formality = 0.6 * (1 - Math.min(1, Math.abs(avgF - target) / 3)) + 0.4 * (0.35 + 0.65 * styleFit);
   const colour = pairHarmony(items.filter((g) => g.category !== "accessory"));
   const weatherFit = items.filter((g) => fitsWeather(g, weather)).length / items.length;
   const patterned = items.filter((g) => g.pattern !== "solid").length;

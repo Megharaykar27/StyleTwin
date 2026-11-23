@@ -52,7 +52,10 @@ router.post("/", limiter, upload.fields([{ name: "person", maxCount: 1 }, { name
   } else throw new HttpError(400, "Please choose a clothing item.");
 
   const category = b.category || garment.category;
-  const { value: image, provider } = await tryOn(personBuf, await readImage(garment.image), { category });
+  // e.g. "red side-tie tee": the colour is added only if the name doesn't already say it
+  const name = garment.name.toLowerCase();
+  const description = `${name.includes(garment.color) ? "" : garment.color + " "}${garment.pattern !== "solid" && !name.includes(garment.pattern) ? garment.pattern + " " : ""}${name}`;
+  const { value: image, provider, note } = await tryOn(personBuf, await readImage(garment.image), { category, description });
   const { rel: resultRel } = await saveImage(image, uid, { maxSize: 1280 });
 
   const id = nanoid(12);
@@ -60,7 +63,7 @@ router.post("/", limiter, upload.fields([{ name: "person", maxCount: 1 }, { name
     "INSERT INTO tryons (id, user_id, person, garment_id, garment, result, provider, seconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     id, uid, personRel, garment.id, garment.image, resultRel, provider, (Date.now() - started) / 1000
   );
-  res.status(201).json({ look: toLook(one("SELECT * FROM tryons WHERE id = ?", id)), garment: toGarment(garment) });
+  res.status(201).json({ look: toLook(one("SELECT * FROM tryons WHERE id = ?", id)), garment: toGarment(garment), note });
 }));
 
 router.get("/", (req, res) => {
