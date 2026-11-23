@@ -7,6 +7,8 @@ import { nanoid } from "nanoid";
 import { all, one, run } from "../lib/db.js";
 import { HttpError, auth, upload, wrap } from "../lib/http.js";
 import { deleteImage, publicUrl, saveImage } from "../lib/storage.js";
+import { dominantColor } from "../lib/color.js";
+import sharp from "sharp";
 import { tagGarment } from "../ai/index.js";
 import { wardrobeGaps } from "../lib/outfits.js";
 import { SAMPLE_CLOTHES } from "../samples/catalog.js";
@@ -23,9 +25,33 @@ export const CATEGORIES = ["top", "bottom", "dress", "outerwear", "shoes", "acce
 
 export const toGarment = (g) => ({ ...g, seasons: JSON.parse(g.seasons), image: publicUrl(g.image) });
 
+// box = [ymin, xmin, ymax, xmax] in 0-1000, padded by 4% on each side
+export async function cropToBox(buffer, [y0, x0, y1, x1]) {
+  const { width: W, height: H } = await sharp(buffer).metadata();
+  const pad = 40;
+  const left = Math.max(0, Math.round(((x0 - pad) / 1000) * W));
+  const top = Math.max(0, Math.round(((y0 - pad) / 1000) * H));
+  const right = Math.min(W, Math.round(((x1 + pad) / 1000) * W));
+  const bottom = Math.min(H, Math.round(((y1 + pad) / 1000) * H));
+  return sharp(buffer).extract({ left, top, width: right - left, height: bottom - top }).toBuffer();
+}
+
 export async function createGarment(userId, buffer, { category, inWardrobe = true } = {}) {
-  const saved = await saveImage(buffer, userId, { maxSize: 900, background: "#ffffff" });
+  let saved = await saveImage(buffer, userId, { maxSize: 900, background: "#ffffff" });
   const { value: t, provider } = await tagGarment(saved.buffer, { category: CATEGORIES.includes(category) ? category : undefined });
+  // A photo of someone wearing the item: keep only the garment, so try-on doesn't
+  // copy the other person's skin or clothes.
+  if (t.crop) {
+    try {
+      const cropped = await cropToBox(saved.buffer, t.crop);
+      await deleteImage(saved.rel);
+      saved = await saveImage(cropped, userId, { maxSize: 900, background: "#ffffff" });
+      const c = await dominantColor(saved.buffer);
+      t.color_hex = c.hex;
+    } catch (err) {
+      console.warn("Garment crop skipped:", err.message);
+    }
+  }
   const id = nanoid(12);
   run(
     `INSERT INTO garments (id, user_id, image, name, category, color, color_hex, pattern, style, formality, seasons, in_wardrobe, tagged_by)

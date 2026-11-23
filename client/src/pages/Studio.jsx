@@ -219,13 +219,16 @@ export default function Studio() {
             value={garment && { url: garment.url }}
             onChange={(f) => { setGarment(f ? asPhoto(f) : null); setLook(null); }}
             label="Add an outfit"
-            hint="A product photo or a screenshot from any shopping site"
+            hint="Best: a product photo of only the clothing, no person wearing it"
             icon={Shirt}
             camera={false}
           />
           <button onClick={() => setDrawer(true)} className="btn-glass mt-3 w-full py-2.5">
             <Shirt size={16} /> Choose from wardrobe
           </button>
+          {garment?.file && aiMode === "demo" && (
+            <p className="mt-3 text-xs text-amber-200/80">Tip: if this photo shows someone wearing the item, the AI may copy their skin or other clothes. A plain product photo works best.</p>
+          )}
           <p className="label mt-5">It's a…</p>
           <div className="flex flex-wrap gap-2">
             {CATS.map((c) => (

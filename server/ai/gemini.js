@@ -1,5 +1,6 @@
-// Gemini provider: real AI. One free key from https://aistudio.google.com
-// powers everything: the try-on image, garment tagging and style analysis.
+// Gemini provider. A free key from https://aistudio.google.com powers garment
+// tagging (and cropping on-model photos), style analysis and stylist notes.
+// The try-on image model needs billing on the key.
 import { GoogleGenAI } from "@google/genai";
 import { dominantColor, PALETTE } from "../lib/color.js";
 import { BODY_SHAPES, cutsFor, paletteFor } from "./styleRules.js";
@@ -20,6 +21,10 @@ async function askJson(parts) {
   return JSON.parse(res.text);
 }
 
+const validBox = (b) =>
+  Array.isArray(b) && b.length === 4 && b.every((v) => Number.isFinite(Number(v))) &&
+  b[2] - b[0] > 80 && b[3] - b[1] > 80; // ignore tiny or broken boxes
+
 const clampList = (v, allowed, fallback) => (allowed.includes(v) ? v : fallback);
 
 // ------------------------------------------------------------- tagging
@@ -34,8 +39,10 @@ export async function tagGarment(buffer, hint = {}) {
  "pattern": one of solid|striped|checked|floral|printed|embroidered|textured,
  "style": one of casual|smart|formal|ethnic|sporty|party|boho,
  "formality": 1 (very relaxed) to 5 (very formal),
- "seasons": array from summer|winter|monsoon|spring|autumn|all}
-${hint.category ? `The user says it is a ${hint.category}.` : ""} Only JSON.` },
+ "seasons": array from summer|winter|monsoon|spring|autumn|all,
+ "worn_by_person": true if a person (or a body part like a torso) is visible in the photo, else false,
+ "box_2d": [ymin, xmin, ymax, xmax] of the main clothing item only, each 0-1000}
+${hint.category ? `The user says it is a ${hint.category}.` : ""} If several items are visible, describe and box the ${hint.category || "most prominent"} one. Only JSON.` },
   ]);
   return {
     name: String(data.name || `${color.name} item`).slice(0, 60),
@@ -46,6 +53,8 @@ ${hint.category ? `The user says it is a ${hint.category}.` : ""} Only JSON.` },
     style: clampList(data.style, ["casual", "smart", "formal", "ethnic", "sporty", "party", "boho"], "casual"),
     formality: Math.min(5, Math.max(1, Math.round(Number(data.formality) || 2))),
     seasons: Array.isArray(data.seasons) && data.seasons.length ? data.seasons.slice(0, 5) : ["all"],
+    // photo shows someone wearing it: tell the caller where the garment is so it can crop
+    crop: data.worn_by_person && validBox(data.box_2d) ? data.box_2d.map(Number) : null,
   };
 }
 
