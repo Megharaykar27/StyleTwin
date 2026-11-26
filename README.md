@@ -134,4 +134,4 @@ Photos are stored only on your own server, resized, and stripped of EXIF and GPS
 
 ## Author
 
-**Megha Raykar** · [GitHub](https://github.com/Megharaykar27) · [LinkedIn](https://www.linkedin.com/in/megha-raykar-335617337)
+**Megha Raykar** · [GitHub](https://github.com/Megharaykar27) · [LinkedIn](https://www.linkedin.com/in/meghxcoder)
